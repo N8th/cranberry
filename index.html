@@ -1,134 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Grid with Highlight Reel</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Grid with Pagination</title>
     <style>
-        body {
-            background-color: #111;
-            color: #fff;
-            font-family: Arial, sans-serif;
-        }
+      body {
+        background-color: #111;
+        color: #fff;
+        font-family: Arial, sans-serif;
+      }
 
-        .highlight-reel {
-            margin-bottom: 20px;
-        }
+      .video-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        padding: 20px;
+      }
 
-        .highlight-reel video {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
+      .video-grid-item {
+        position: relative;
+        text-align: center;
+      }
 
-        .video-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            padding: 20px;
-        }
+      .video-grid-item img {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
 
-        .video-grid-item {
-            position: relative;
-            text-align: center;
-        }
+      .video-title {
+        margin-top: 10px;
+        color: white;
+      }
 
-        .video-grid-item video {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
+      .pagination {
+        text-align: center;
+        margin: 20px 0;
+      }
 
-        .video-title {
-            margin-top: 10px;
-        }
+      .pagination button {
+        background-color: #444;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        cursor: pointer;
+      }
+
+      .pagination button:hover {
+        background-color: #666;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <h1>Video Grid with Pagination</h1>
 
-    <h1>Video Highlight Reel</h1>
-    <div class="highlight-reel" id="highlightReel">
-        <video id="highlightVideo" controls autoplay muted></video>
-    </div>
-
-    <h1>Video Grid</h1>
     <div class="video-grid" id="videoGrid"></div>
 
+    <div class="pagination" id="pagination"></div>
+
     <script>
-        let clipsArray = [];
+      let clipsArray = [];
+      const videosPerPage = 9;
+      let currentPage = 1;
 
-        // Function to play a random clip from the clipsArray
-        function playRandomClip() {
-            if (clipsArray.length > 0) {
-                const randomClip = clipsArray[Math.floor(Math.random() * clipsArray.length)];
-                const highlightVideo = document.getElementById('highlightVideo');
-                highlightVideo.src = `./videos/${randomClip.clipFileName}`;
-                
-                // Play the clip and load the next one when it's done
-                highlightVideo.onended = playRandomClip;
-            }
+      // Function to shuffle the array randomly
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
         }
+        return array;
+      }
 
-        // Load the JSON data
-        fetch('./videos/data.json')
-        .then(response => response.json())
-        .then(data => {
-            const videoGrid = document.getElementById('videoGrid');
+      // Function to render videos for the current page
+      function renderVideos(page = 1) {
+        const videoGrid = document.getElementById("videoGrid");
+        videoGrid.innerHTML = ""; // Clear previous videos
 
-            // Loop through each video file
-            data.forEach(videoItem => {
-                // Display the main video file
-                const videoDiv = document.createElement('div');
-                videoDiv.className = 'video-grid-item';
+        const start = (page - 1) * videosPerPage;
+        const end = start + videosPerPage;
+        const videosToDisplay = clipsArray.slice(start, end);
 
-                const videoElement = document.createElement('video');
-                videoElement.src = `./videos/${videoItem.fileName}`;
-                videoElement.controls = true;
+        videosToDisplay.forEach((clip) => {
+          const videoDiv = document.createElement("div");
+          videoDiv.className = "video-grid-item";
 
-                const videoTitle = document.createElement('p');
-                videoTitle.className = 'video-title';
-                videoTitle.textContent = `Main Video: ${videoItem.fileName}`;
+          // Load only a thumbnail preview of the video
+          const imgElement = document.createElement("img");
+          imgElement.src = `./videos/${clip.clipFileName}#t=0.5`; // Load video thumbnail
+          imgElement.alt = "Video Preview";
 
-                videoDiv.appendChild(videoElement);
-                videoDiv.appendChild(videoTitle);
+          const videoTitle = document.createElement("p");
+          videoTitle.className = "video-title";
+          videoTitle.textContent = `Clip ${clip.clipNumber}: ${clip.clipFileName} (Duration: ${clip.duration})`;
 
-                // Append the main video to the grid
-                videoGrid.appendChild(videoDiv);
+          videoDiv.appendChild(imgElement);
+          videoDiv.appendChild(videoTitle);
 
-                // Loop through each clip and display, ignoring clips shorter than 1 second
-                videoItem.clips.forEach(clip => {
-                    const clipDuration = parseFloat(clip.duration);
-                    if (clipDuration >= 1) {  // Only include clips 1 second or longer
-                        const clipDiv = document.createElement('div');
-                        clipDiv.className = 'video-grid-item';
+          videoGrid.appendChild(videoDiv);
+        });
+      }
 
-                        const clipElement = document.createElement('video');
-                        clipElement.src = `./videos/${clip.clipFileName}`;
-                        clipElement.controls = true;
+      // Function to render pagination buttons
+      function renderPagination() {
+        const pagination = document.getElementById("pagination");
+        pagination.innerHTML = ""; // Clear existing buttons
 
-                        const clipTitle = document.createElement('p');
-                        clipTitle.className = 'video-title';
-                        clipTitle.textContent = `Clip ${clip.clipNumber}: ${clip.clipFileName} (Duration: ${clip.duration})`;
+        const totalPages = Math.ceil(clipsArray.length / videosPerPage);
 
-                        clipDiv.appendChild(clipElement);
-                        clipDiv.appendChild(clipTitle);
+        for (let i = 1; i <= totalPages; i++) {
+          const button = document.createElement("button");
+          button.textContent = i;
+          if (i === currentPage) {
+            button.style.backgroundColor = "#666";
+          }
+          button.onclick = () => {
+            currentPage = i;
+            renderVideos(currentPage);
+            renderPagination();
+          };
+          pagination.appendChild(button);
+        }
+      }
 
-                        // Append each clip to the grid
-                        videoGrid.appendChild(clipDiv);
-
-                        // Add the clip to the clipsArray for the highlight reel
-                        clipsArray.push(clip);
-                    }
-                });
+      // Load the JSON data
+      fetch("./videos/data.json")
+        .then((response) => response.json())
+        .then((data) => {
+          // Loop through each video file
+          data.forEach((videoItem) => {
+            // Loop through each clip and collect them, ignoring clips shorter than 1 second
+            videoItem.clips.forEach((clip) => {
+              const clipDuration = parseFloat(clip.duration);
+              if (clipDuration >= 1) {
+                // Add clip to clipsArray for pagination
+                clipsArray.push(clip);
+              }
             });
+          });
 
-            // Start the highlight reel with a random clip
-            playRandomClip();
+          // Shuffle the clips array to display randomly
+          clipsArray = shuffle(clipsArray);
+
+          // Render the first page of videos
+          renderVideos(currentPage);
+
+          // Render pagination buttons
+          renderPagination();
         })
-        .catch(error => console.error('Error loading the JSON file:', error));
+        .catch((error) => console.error("Error loading the JSON file:", error));
     </script>
-
-</body>
+  </body>
 </html>
